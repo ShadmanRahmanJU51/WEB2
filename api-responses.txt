@@ -1,0 +1,17 @@
+=== Assignment 3: GET /task/:id tests ===
+
+1. Valid ID (task exists)
+GET http://localhost:3000/task/1
+→ 200 OK
+{
+  "id": 1,
+  "title": "Learn Node.js",
+  "completed": false,
+  "priority": "high",
+  "createdAt": "2023-01-01T00:00:00.000Z"
+}
+
+2. Task not found
+GET http://localhost:3000/task/999
+→ 404 Not Found
+{ "error": "Task not found" }
