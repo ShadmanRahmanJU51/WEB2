@@ -12,13 +12,24 @@ const tasks = [
 router.get('/', (req, res) => res.json(tasks));
 
 router.get('/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const task = tasks.find(t => t.id === id);
-  if (task) {
-    res.json(task);
-  } else {
-    res.status(404).json({ error: "Task not found" });
+  const idParam = req.params.id;
+
+  // Check if ID is a valid positive integer
+  if (!/^\d+$/.test(idParam)) {
+    return res.status(400).json({ 
+      error: "Invalid ID format",
+      message: "ID must be a positive integer" 
+    });
   }
+
+  const id = parseInt(idParam);
+  const task = tasks.find(t => t.id === id);
+
+  if (!task) {
+    return res.status(404).json({ error: "Task not found" });
+  }
+
+  res.json(task);
 });
 
 module.exports = router;
