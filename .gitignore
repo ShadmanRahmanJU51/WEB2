@@ -1,3 +1,4 @@
 node_modules/
+tasks-response.json
 .env
-npm-debug.log
+*.log
