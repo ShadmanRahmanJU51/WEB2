@@ -11,14 +11,8 @@ app.get('/health', (req, res) => {
   res.json({ status: "healthy", uptime: process.uptime() });
 });
 
-app.get('/task/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const task = tasks.find(t => t.id === id);
-  if (task) {
-    res.json(task);
-  } else {
-    res.status(404).json({ error: "Task not found" });
-  }
-});
+// Use router
+app.use('/tasks', tasksRouter);
+app.use('/task', tasksRouter); // for backward compatibility with Assignment 3
 
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
