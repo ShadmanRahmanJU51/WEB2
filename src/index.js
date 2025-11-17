@@ -60,4 +60,13 @@ app.get('/health', (req, res) => {
 app.use('/tasks', tasksRouter);
 app.use('/task', tasksRouter);  // keeping your backward compatibility
 
+// GET /health - Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
