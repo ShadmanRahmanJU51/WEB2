@@ -4,11 +4,11 @@ const router = express.Router();
 const db = require('../../config/db'); // Correct path
 
 // GET /tasks - Pagination Support (Task 1) - NO deleted_at required
+// GET /tasks - Pagination + Search by Title (Task 1 + Task 2)
 router.get('/', async (req, res) => {
     try {
-        let { page = 1, limit = 10 } = req.query;
+        let { page = 1, limit = 10, q } = req.query;
 
-        // Sanitize inputs
         page = parseInt(page) || 1;
         limit = parseInt(limit) || 10;
         if (page < 1) page = 1;
@@ -17,22 +17,43 @@ router.get('/', async (req, res) => {
 
         const offset = (page - 1) * limit;
 
-        // Count total tasks
-        const [countResult] = await db.query('SELECT COUNT(*) as total FROM tasks');
+        // Build dynamic query parts
+        let whereClause = '';
+        let countWhere = '';
+        let queryParams = [];
+        let countParams = [];
+
+        if (q && q.trim() !== '') {
+            const searchTerm = `%${q.trim()}%`;
+            whereClause = 'WHERE title LIKE ?';
+            countWhere = 'WHERE title LIKE ?';
+            queryParams.push(searchTerm);
+            countParams.push(searchTerm);
+        }
+
+        // Count total matching tasks
+        const countQuery = `SELECT COUNT(*) as total FROM tasks ${countWhere}`;
+        const [countResult] = await db.query(countQuery, countParams);
         const totalTasks = countResult[0].total;
         const totalPages = Math.ceil(totalTasks / limit);
 
-        // Get paginated tasks
-        const [rows] = await db.query(
-            'SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?',
-            [limit, offset]
-        );
+        // Fetch paginated + searched tasks
+        const dataQuery = `
+            SELECT * FROM tasks 
+            ${whereClause}
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        `;
+        queryParams.push(limit, offset);
+
+        const [rows] = await db.query(dataQuery, queryParams);
 
         res.json({
             totalTasks,
             totalPages,
             currentPage: page,
             limit,
+            search: q || null,
             data: rows
         });
 
