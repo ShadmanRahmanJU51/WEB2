@@ -1,15 +1,43 @@
 // src/routes/tasks.js
 const express = require('express');
 const router = express.Router();
-const db = require('../../config/db'); // ← CORRECT PATH
+const db = require('../../config/db'); // Correct path
 
-// GET all tasks
+// GET /tasks - Pagination Support (Task 1) - NO deleted_at required
 router.get('/', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM tasks ORDER BY created_at DESC');
-        res.json(rows);
+        let { page = 1, limit = 10 } = req.query;
+
+        // Sanitize inputs
+        page = parseInt(page) || 1;
+        limit = parseInt(limit) || 10;
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 10;
+        if (limit > 50) limit = 50;
+
+        const offset = (page - 1) * limit;
+
+        // Count total tasks
+        const [countResult] = await db.query('SELECT COUNT(*) as total FROM tasks');
+        const totalTasks = countResult[0].total;
+        const totalPages = Math.ceil(totalTasks / limit);
+
+        // Get paginated tasks
+        const [rows] = await db.query(
+            'SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            [limit, offset]
+        );
+
+        res.json({
+            totalTasks,
+            totalPages,
+            currentPage: page,
+            limit,
+            data: rows
+        });
+
     } catch (err) {
-        console.error(err);
+        console.error('GET /tasks error:', err);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -30,7 +58,6 @@ router.get('/:id', async (req, res) => {
 });
 
 // CREATE task
-// CREATE task - FIXED VERSION
 router.post('/', async (req, res) => {
     const { title, description } = req.body;
 
@@ -43,11 +70,10 @@ router.post('/', async (req, res) => {
             'INSERT INTO tasks (title, description) VALUES (?, ?)',
             [title.trim(), description || null]
         );
-
         const [newTask] = await db.query('SELECT * FROM tasks WHERE id = ?', [result.insertId]);
         res.status(201).json(newTask[0]);
     } catch (err) {
-        console.error('MySQL Error:', err);  // ← This will now show the real error in terminal
+        console.error('MySQL Error:', err);
         res.status(500).json({ error: 'Failed to create task' });
     }
 });
@@ -91,7 +117,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE task
+// DELETE task (hard delete - as in Lab 03)
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid ID format' });
